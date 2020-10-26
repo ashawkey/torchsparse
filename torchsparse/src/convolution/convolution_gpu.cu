@@ -119,13 +119,13 @@ __global__ void matmul(const float *A, const int wA, const int hA,
     __syncthreads();
 
     if(in_row >= 0 && out_row >= 0){
-        // Multiply the two matrices together;
-        // each thread computes one element
-        // of the block sub-matrix
-    #pragma unroll
-        for (int k = 0; k < BLOCK_SIZE; ++k) {
-          Csub += As[ty][k] * Bs[k][tx];
-        }
+      // Multiply the two matrices together;
+      // each thread computes one element
+      // of the block sub-matrix
+      #pragma unroll
+      for (int k = 0; k < BLOCK_SIZE; ++k) {
+        Csub += As[ty][k] * Bs[k][tx];
+      }
     }
 
     // Synchronize to make sure that the preceding
@@ -222,7 +222,7 @@ __global__ void matmul2(const float *A, const int wA, const int hA,
     // Multiply the two matrices together;
     // each thread computes one element
     // of the block sub-matrix
-#pragma unroll
+    #pragma unroll
     for (int k = 0; k < BLOCK_SIZE; ++k) {
       Csub += As[ty][k] * BTs[k][tx];
     }
@@ -230,7 +230,7 @@ __global__ void matmul2(const float *A, const int wA, const int hA,
     Esub = 0;
     
     // For Esub, reset to 0
-#pragma unroll
+    #pragma unroll
     for (int k = 0; k < BLOCK_SIZE; ++k) {
       Esub += DTs[k][ty] * As[k][tx];
     }
@@ -284,18 +284,29 @@ void ConvolutionForwardKernelGPU(
       dim3 grid((out_nchannel + threads.x - 1) / threads.x, (n_active_in_volume + threads.y - 1) / threads.y);
 
       matmul<<<grid, threads, 0, stream>>>(
-          d_in_feat, in_nchannel, n_active_in_volume,
-          &d_kernel[k * in_nchannel * out_nchannel], out_nchannel, in_nchannel,
-          d_out_feat, &neighbor_map[cur_offset], neighbor_offset[k], transpose
+          d_in_feat, 
+          in_nchannel, 
+          n_active_in_volume,
+          &d_kernel[k * in_nchannel * out_nchannel],
+          out_nchannel, 
+          in_nchannel,
+          d_out_feat, 
+          &neighbor_map[cur_offset], 
+          neighbor_offset[k], 
+          transpose
         );
     } else {
-      //printf("call2\n");
       num_kernels = out_nchannel * n_active_in_volume;
 
       inplace_convolution<<<GET_BLOCKS(num_kernels), CUDA_NUM_THREADS, 0, stream>>>(
-              num_kernels, d_in_feat, in_nchannel, d_out_feat, out_nchannel,
-              &d_kernel[k * in_nchannel * out_nchannel], neighbor_map + cur_offset
-            );
+          num_kernels, 
+          d_in_feat, 
+          in_nchannel, 
+          d_out_feat, 
+          out_nchannel,
+          &d_kernel[k * in_nchannel * out_nchannel], 
+          &neighbor_map[cur_offset]
+        );
     }
     cur_offset += 2 * neighbor_offset[k];
   }
@@ -331,7 +342,9 @@ void ConvolutionBackwardKernelGPU(
         d_in_feat, in_nchannel, n_active_in_volume,     // D
         d_grad_in_feat,                                 // C
         &d_grad_kernel[k * in_nchannel * out_nchannel], // E
-        neighbor_map + cur_offset, neighbor_offset[k], transpose);
+        &neighbor_map[cur_offset], 
+        neighbor_offset[k], 
+        transpose);
     
     cur_offset += 2 * neighbor_offset[k];
   }

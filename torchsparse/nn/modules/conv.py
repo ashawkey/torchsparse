@@ -11,7 +11,7 @@ from torchsparse.utils import make_list
 from ..functional import *
 
 
-__all__ = ['Conv3d', 'DeformConv3d', 'Conv4d', 'DepthwiseConv4d', 'DepthwiseConv3d']
+__all__ = ['Conv3d', 'DeformConv3d', 'Conv4d', 'DepthwiseConv4d', 'DepthwiseConv3d', 'Conv3_5d']
 
 
 class Conv3d(nn.Module):
@@ -199,7 +199,12 @@ class Conv4d(nn.Module):
         self.stride = make_list(stride, 4)
         self.dilation = make_list(dilation, 4)
 
-        if np.prod(self.kernel_size) > 1:
+        if isinstance(self.kernel_size, str):
+            if self.kernel_size == 'hypercross':
+                self.kernel = nn.Parameter(torch.zeros(9, in_channels, out_channels))
+            else:
+                raise NotImplementedError
+        elif np.prod(self.kernel_size) > 1:
             self.kernel = nn.Parameter(torch.zeros(np.prod(self.kernel_size), in_channels, out_channels))
         else:
             assert not transpose
@@ -214,16 +219,16 @@ class Conv4d(nn.Module):
 
     def __repr__(self):
         if not self.t:
-            return 'Conv4d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%d, dilation=%d)' % (
+            return 'Conv4d(in_channels={}, out_channels={}, kernel_size={}, stride={}, dilation={})'.format(
                 self.in_channels, self.out_channels, self.kernel_size,
                 self.stride, self.dilation)
         else:
-            return 'TransposedConv4d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%d, dilation=%d)' % (
+            return 'TransposedConv4d(in_channels={}, out_channels={}, kernel_size={}, stride={}, dilation={})'.format(
                 self.in_channels, self.out_channels, self.kernel_size,
                 self.stride, self.dilation)
 
     def init_weight(self):
-        std = 1. / math.sqrt(self.out_channels if self.t else self.in_channels * np.prod(self.kernel_size))
+        std = 1. / math.sqrt(self.out_channels if self.t else self.in_channels * self.kernel.shape[0])
         self.kernel.data.uniform_(-std, std)
         if self.bias is not None:
             self.bias.data.uniform_(-std, std)
@@ -324,6 +329,66 @@ class DepthwiseConv4d(nn.Module):
 
     def forward(self, inputs):
         return dwconv4d(inputs,
+                      self.kernel,
+                      self.bias,
+                      kernel_size=self.kernel_size,
+                      stride=self.stride,
+                      dilation=self.dilation,
+                      transpose=self.t)
+
+
+class Conv3_5d(nn.Module):
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 kernel_size=3,
+                 stride=1,
+                 dilation=1,
+                 bias=False,
+                 transpose=False):
+
+        super().__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+
+        assert isinstance(kernel_size, int)
+        assert isinstance(stride, int)
+        assert isinstance(dilation, int)
+
+        self.kernel_size = np.array([kernel_size, kernel_size, kernel_size])
+        self.stride = np.array([1, stride, stride, stride])
+        self.dilation = np.array([1, dilation, dilation, dilation])
+
+        if np.prod(self.kernel_size) > 1:
+            self.kernel = nn.Parameter(torch.zeros(np.prod(self.kernel_size), in_channels, out_channels))
+        else:
+            assert not transpose
+            self.kernel = nn.Parameter(torch.zeros(in_channels, out_channels))
+                      
+        self.bias = None if not bias else nn.Parameter(torch.zeros(out_channels))
+
+        self.t = transpose
+        self.init_weight()
+            
+
+    def __repr__(self):
+        if not self.t:
+            return 'Conv3d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%d, dilation=%d)' % (
+                self.in_channels, self.out_channels, self.kernel_size,
+                self.stride, self.dilation)
+        else:
+            return 'TransposedConv3d(in_channels=%d, out_channels=%d, kernel_size=%d, stride=%d, dilation=%d)' % (
+                self.in_channels, self.out_channels, self.kernel_size,
+                self.stride, self.dilation)
+
+    def init_weight(self):
+        std = 1. / math.sqrt(self.out_channels if self.t else self.in_channels * np.prod(self.kernel_size))
+        self.kernel.data.uniform_(-std, std)
+        if self.bias is not None:
+            self.bias.data.uniform_(-std, std)
+
+    def forward(self, inputs):
+        return conv3_5d(inputs,
                       self.kernel,
                       self.bias,
                       kernel_size=self.kernel_size,

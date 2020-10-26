@@ -3,8 +3,10 @@
 #include "count_gpu.h"
 
 
-//make sure indices is int type
-//feat: (b,c,n) indices: (b,n) -> out: (b,c,s), out_indices: (b,n) (preprocessed indices)
+/*
+idx: [N]
+s: output size
+*/
 at::Tensor count_forward(
     const at::Tensor idx,
     const int s

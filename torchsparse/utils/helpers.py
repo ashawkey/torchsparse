@@ -11,10 +11,10 @@ def make_list(x, size=3):
     if isinstance(x, int):
         return np.array([x for i in range(size)])
     elif isinstance(x, list) or isinstance(x, tuple) or isinstance(x, np.ndarray):
-        assert (len(x) == size)
+        #assert (len(x) == size)
         return np.array(x)
     else:
-        raise TypeError
+        return x
 
 
 def ravel_hash_vec(arr):

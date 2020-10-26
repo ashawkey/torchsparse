@@ -2,6 +2,12 @@
 #include <vector>
 #include "insertion_gpu.h"
 
+
+/*
+inputs: [N, c]
+idx: [N,]
+counts: [N1,]
+*/
 at::Tensor insertion_forward(
     const at::Tensor inputs,
     const at::Tensor idx,

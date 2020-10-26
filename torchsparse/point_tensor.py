@@ -39,3 +39,6 @@ class PointTensor:
                              self.weights)
         tensor.additional_features = self.additional_features
         return tensor
+
+    def __str__(self):
+        return f'PointTensor: F={self.F.shape}, C={self.C.shape}'

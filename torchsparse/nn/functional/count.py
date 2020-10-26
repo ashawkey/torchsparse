@@ -4,7 +4,8 @@ import torchsparse_cuda
 
 __all__ = ['spcount']
 
-
+# idx: [N], num: output size
+# return cnt: [num]
 class CountGPU(Function):
     @staticmethod
     def forward(ctx, idx, num):

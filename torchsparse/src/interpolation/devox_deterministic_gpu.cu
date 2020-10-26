@@ -22,6 +22,7 @@ __global__ void deterministic_devoxelize_kernel(
         const float * weight_ = weight + l * i;
         const float * feat_ = feat + j;
         float cur_feat;
+        
         //#pragma unroll
         for(int k = 0; k < l; k++){
             cur_feat = (indices_[k] >= 0) ? feat_[indices_[k] * c]  : 0; 
